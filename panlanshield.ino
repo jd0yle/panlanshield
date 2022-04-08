@@ -38,11 +38,7 @@ Adafruit_DotStar strip(NUMPIXELS, DOTSTAR_BGR);
 /**
 * LED INDEX CONFIG
 **/
-/* struct Branch {
-    int index;
-    int parentIndex;
-    int childIndexes[2];
-}; */
+#define NUMSTRIKEPATHS 3
 
 struct Node {
     int index;
@@ -52,10 +48,8 @@ struct Node {
     bool isBranchStart;
 };
 
-/* int numBranches = 10;
-Branch branches[10]; */
-
-int endPointIndexes[] = {47, 69, 122, 135, 151, 165, 201, 213, 246, 257, 301, 314, 348, 364, 399, 415, 446, 463, 492, 512};
+//int endPointIndexes[] = {47, 69, 122, 135, 151, 165, 201, 213, 246, 257, 301, 314, 348, 364, 399, 415, 446, 463, 492, 512};
+int endPointIndexes[] = {122, 135, 151, 165, 201, 213, 246, 257, 301, 314, 348, 364, 399, 415, 446, 463, 492, 512, 47, 69};
 int endPointIndexesLength = sizeof endPointIndexes / sizeof endPointIndexes[0];
 
 int midEndIndexes[] = {7, 48, 70, 91, 123, 136, 152, 166, 169, 188, 202, 214, 236, 247, 258, 268, 294, 302, 315, 332, 349, 365, 400, 416, 424, 447, 464, 477, 493};
@@ -64,7 +58,12 @@ int midEndIndexesLength = sizeof midEndIndexes / sizeof midEndIndexes[0];
 int powerStartIndexes[] = {0, 70, 166, 258, 365, 416};
 int powerStartIndexesLength = sizeof powerStartIndexes / sizeof powerStartIndexes[0];
 
+int centerNodeIndexes[] = {0, 166};
+int centerNodeIndexesLength = sizeof centerNodeIndexes / sizeof centerNodeIndexes[0];
+
 Node nodes[NUMPIXELS];
+
+
 
 void setup() {
     pinMode(13, OUTPUT);
@@ -72,7 +71,7 @@ void setup() {
 
     //#ifdef ENABLESERIAL
     Serial.begin(9600);
-    while (!Serial) {
+    /* while (!Serial) {
         for (int x = 0; x < 10; x++) {
             digitalWrite(13, HIGH);
             delay(50);
@@ -80,16 +79,10 @@ void setup() {
             delay(50);
         }
         //delay(100); // will pause to see if serial comes online, but won't halt indefinitely
-    }
+    } */
 
     Serial.println("Starting up...");
     //#endif
-
-    // Initialize SD library
-/*     if (!SD.begin()) {
-      Serial.println(F("Failed to initialize SD library"));
-      delay(500);
-    } */
 
 
     delay(500);
@@ -98,21 +91,6 @@ void setup() {
     setupAccelerometer();
     setupLightSensor();
 
-
-
-/*     for (int i = 0; i < NUMPIXELS; i++) {
-        nodes[i].index = i;
-        nodes[i].parentIndex = i - 1;
-        //nodes[i].childIndexes = [i + 1, -1];
-        nodes[i].isEndpoint = false;
-    }
-
-    for (int i = 0; i < endPointIndexesLength; i++) {
-        int pixelIndex = endPointIndexes[i];
-        nodes[pixelIndex].isEndpoint = true;
-        nodes[pixelIndex].childIndexes[0] = -1;
-        nodes[pixelIndex].childIndexes[1] = -1;
-    } */
 
     /**
      * Dotstar Strip Setup
@@ -126,346 +104,49 @@ void setup() {
 
 int startIndex = 0;
 int strikeLength = 72;
-float intensity = 1.0;
-float duration = .5;
+float intensity = .5;
+float duration = .1;
 
 uint32_t lightningColor = strip.Color(255, 255, 255);
 
 int toggle = 0;
+int endpointThingIndex = 2;
+//int pathStartIndexes[NUMSTRIKEPATHS] = {47, 69, 122};
+int pathStartIndexes[NUMSTRIKEPATHS];
 
 void loop() {
-  //  /* Get the light sensor reading */
-//    sensors_event_t accel;
-//    sensors_event_t gyro;
-//    sensors_event_t temp;
-//    dso32.getEvent(&accel, &gyro, &temp);
-//    printAccelData(accel, gyro, temp);
+
+    sensors_event_t accel;
+    sensors_event_t gyro;
+    sensors_event_t temp;
+    dso32.getEvent(&accel, &gyro, &temp);
+    printAccelData(accel, gyro, temp);
 //
 //    //intensity = (accel.acceleration.y + 10) / 20;
 //
+ //  /* Get the light sensor reading */
 //    //uint16_t x = tsl.getLuminosity(TSL2591_VISIBLE);
 //    float x = tsl.getLuminosity(TSL2591_VISIBLE);
 //    intensity = x / 60000;
 //    Serial.print("X: "); Serial.println(x);
 //    Serial.print("Intensity: "); Serial.println(intensity);
 
-// UNCOMMENT THIS FOR TESTING LIGHT INTENSITY
-//    for (int i = 0; i < NUMPIXELS; i++) {
-//      strip.setPixelColor(i, (accel.acceleration.x + 10) / 20 * 255, 0, 196);
-//    }
-//
-//    strip.setBrightness(255 * intensity);
-//
-//    strip.show();
-//
-//    simpleRead();
-//
-//    //delay(20);
-//
-//    return;
+    /* pixelIndexTest();
+    return; */
 
-    //pixelIndexTest();
+    /* lightningStrike();
+    return; */
 
-    //delay(10000);
+    //float theta = atan2(lis.x, lis.y) * 180 / 3.14159265 + 180;
+    float theta = atan2(accel.acceleration.x, accel.acceleration.y) * 180 / 3.14159265 + 180;
+    //int ledIndex = NUMPIXELS - round(theta / 360 * 288);
+    int ledIndex = 20 - round(theta / 360 * 20);
 
-    /* digitalWrite(13, HIGH);
-    delay(500);
-    digitalWrite(13, LOW);
-    delay(500);
-    digitalWrite(13, HIGH);
-    delay(500);
-    digitalWrite(13, LOW);
-    delay(500);
-    digitalWrite(13, HIGH);
-
-    Serial.println("Top of loop"); */
-
-    /* int i = 0;
-    while(branches[i].index > -1 && i < numBranches) {
-        if (branches[i].childIndexes[0] > -1) {
-            nodes[i].childIndexes[0] = branches[i].childIndexes[0];
-            nodes[i].childIndexes[1] = branches[i].childIndexes[1];
-        }
-
-         *//* strip.setPixelColor(branches[i].index, 64, 255, 0);
-        strip.setPixelColor(branches[i].childIndexes[0], 255, 64, 0);
-        strip.setPixelColor(branches[i].childIndexes[1], 255, 64, 0); *//*
-        i++;
-    } */
+    /* strip.clear();
+    setPixelColor(endPointIndexes[ledIndex], strip.Color(0, 255, 0)); */
+    lightningStrike(ledIndex);
     //strip.show();
-    //delay(200);
-
-
-
-
-    int strikeEndpoints[3] = {47, 69, 122};
-    int strikePath1[NUMPIXELS];
-    int strikePath2[NUMPIXELS];
-    int strikePath3[NUMPIXELS];
-
-    //Serial.println("Initializing strikePaths");
-
-    for (int index = 0; index < NUMPIXELS; index++) {
-        strikePath1[index] = -1;
-        strikePath2[index] = -1;
-        strikePath3[index] = -1;
-    }
-
-    //Serial.println("Setting first array");
-
-    int x = 47;
-    int arrayLength = 0;
-    while (x > 0) {
-        /* Serial.print("x: ");
-        Serial.print(x);
-        Serial.print(" arrayLength: ");
-        Serial.print(arrayLength);
-        Serial.print("  nodes[x].parentIndex: ");
-        Serial.print(nodes[x].parentIndex); */
-        strikePath1[arrayLength] = nodes[x].index;
-        arrayLength++;
-        x = nodes[x].parentIndex;// || -1;
-        /* Serial.print(" new x: ");
-        Serial.println(x); */
-    }
-
-    // Serial.println("Reversing first array");
-
-    for (int n = 0; n < arrayLength; n++) {
-        if (arrayLength - n <= n) {
-            break;
-        }
-        int tmp = strikePath1[n];
-        strikePath1[n] = strikePath1[arrayLength - n];
-        strikePath1[arrayLength - n] = tmp;
-    }
-
-    //Serial.println("Setting second array");
-
-    x = 69;
-    arrayLength = 0;
-    while (x >= 0) {
-        /* Serial.print("x=");
-        Serial.print(x);
-        Serial.print(" nodes[x].index=");
-        Serial.print(nodes[x].index);
-        Serial.print("  Adding next node, child: ");
-        Serial.print(nodes[x].index);
-        Serial.print(" -> ");
-        Serial.println(nodes[x].parentIndex); */
-
-        //strikePath2[arrayLength] = nodes[x].parentIndex;
-        strikePath2[arrayLength] = nodes[x].index;
-        arrayLength++;
-        x = nodes[x].parentIndex;
-    }
-
-    //Serial.println("Reversing second array");
-    for (int n = 0; n < arrayLength; n++) {
-        if (arrayLength - n <= n) {
-            break;
-        }
-        int tmp = strikePath2[n];
-        strikePath2[n] = strikePath2[arrayLength - n];
-        strikePath2[arrayLength - n] = tmp;
-    }
-
-
-
-    //Serial.println("Setting third array");
-    x = 122;
-    arrayLength = 0;
-    while (x > 0) {
-        strikePath3[arrayLength] = nodes[x].index;
-        arrayLength++;
-        x = nodes[x].parentIndex;
-    }
-
-
-
-    //Serial.println("Reversing third array");
-    for (int n = 0; n < arrayLength; n++) {
-        if (arrayLength - n <= n) {
-            break;
-        }
-        int tmp = strikePath3[n];
-        strikePath3[n] = strikePath3[arrayLength - n];
-        strikePath3[arrayLength - n] = tmp;
-    }
-
-    //Serial.println("Setting pixel colors");
-
-    //for (int z = 60; z >= 0; z--) {
-
-    for (int z = 0; z < NUMPIXELS; z++) {
-        /* Serial.print("Setting path step ");
-        Serial.println(z); */
-        if (strikePath1[z] > -1) {
-            //strip.setPixelColor(strikePath1[z], 64, 255, 128);
-            strip.setPixelColor(strikePath1[z], 255, 255, 255);
-        }
-        if (strikePath2[z] > -1) {
-            //strip.setPixelColor(strikePath2[z], 0, 255, 255);
-            strip.setPixelColor(strikePath2[z], 255, 255, 255);
-        }
-        if (strikePath3[z] > -1) {
-            //strip.setPixelColor(strikePath3[z], 0, 64, 255);
-            strip.setPixelColor(strikePath3[z], 255, 255, 255);
-        }
-        if (z % 5 == 0) {
-            strip.show();
-        }
-        if (z > 130) {
-            break;
-        }
-        /* if (strikePath1[z] == -1 && strikePath2[z] == -1 && strikePath3[z] == -1) {
-            //Serial.println("Ducking out early!");
-            break;
-        } */
-    }
-    strip.show();
-
-
-    for (int b = 40; b > 12; b = b - 8) {
-        strip.setBrightness(b * intensity);
-        strip.show();
-        delay(20 * duration);
-    }
-
-    strip.setBrightness(100 * intensity);
-    strip.show();
-    delay(10 * duration);
-
-    strip.setBrightness(6 * intensity);
-    strip.show();
-    delay(50 * duration);
-
-    strip.setBrightness(1);
-    strip.show();
-    delay(50 * duration);
-
-    strip.setBrightness(100 * intensity);
-    strip.show();
-    delay(150 * duration);
-
-    //      for (int b = 75; b > 12; b = b - 8) {
-    for (int b = 100; b > 12; b = b - 8) {
-        strip.setBrightness(b * intensity);
-        strip.show();
-        delay(1);
-    }
-
-    strip.setBrightness(1);
-    strip.show();
-    delay(1);
-
-    strip.clear();
-    strip.show();
-    delay(1000);
-
-
-
-
-    delay(100);
-    strip.clear();
-    //strip.fill(strip.Color(16,16,16));
-    strip.show();
-    delay(1000);
-
-    return;
-
-
-    //      for (int blinkIndex = startIndex; blinkIndex < startIndex + strikeLength; blinkIndex += 5) {
-      for (int blinkIndex = startIndex; blinkIndex < startIndex + strikeLength; blinkIndex += 3) {
-      	strip.setPixelColor(blinkIndex, lightningColor);
-      	strip.setPixelColor(blinkIndex + 1, lightningColor);
-      	strip.setPixelColor(blinkIndex + 2, lightningColor);
-      	//	strip.setPixelColor(blinkIndex + 3, lightningColor);
-      	//	strip.setPixelColor(blinkIndex + 4, lightningColor);
-      	strip.show();
-      	delay(1);
-      }
-
-      Serial.println("Starting strike paint");
-      for (int i = startIndex; i < startIndex + strikeLength; i++) {
-	      strip.setPixelColor(i, lightningColor);
-      }
-      Serial.println("Ended strike paint");
-
-      for (int b = 40; b > 12; b = b - 8) {
-      	strip.setBrightness(b * intensity);
-      	strip.show();
-      	delay(20 * duration);
-      }
-
-      strip.setBrightness(100 * intensity);
-      strip.show();
-      delay(10 * duration);
-
-      strip.setBrightness(6 * intensity);
-      strip.show();
-      delay(50 * duration);
-
-      /*      strip.setBrightness(25 * intensity);
-      strip.show();
-      delay(50);
-
-      strip.setBrightness(12 * intensity);
-      strip.show();
-      delay(100);
-
-      strip.setBrightness(75 * intensity);
-      strip.show();
-      delay(100);
-      */
-      //      strip.setBrightness(0 * intensity);
-      strip.setBrightness(1);
-      strip.show();
-      delay(50 * duration);
-
-      strip.setBrightness(100 * intensity);
-      strip.show();
-      delay(150 * duration);
-
-      //      for (int b = 75; b > 12; b = b - 8) {
-      for (int b = 100; b > 12; b = b - 8) {
-      	strip.setBrightness(b * intensity);
-      	strip.show();
-      	delay(1);
-      }
-
-      strip.setBrightness(1);
-      strip.show();
-      delay(1);
-
-      strip.clear();
-      strip.show();
-      delay(1000);
-
-
-      startIndex = startIndex + strikeLength;
-      if (startIndex > NUMPIXELS) {
-	      //startIndex = 145;
-	  	  startIndex = 0;
-      }
-
-    /*    blinkIndex++;
-    if (blinkIndex >= 230) {
-      blinkIndex = 200;
-    }*/
-
-
-    /*    float theta = atan2(lis.x, lis.y) * 180 / 3.14159265 + 180;
-    int ledIndex = NUMPIXELS - round(theta / 360 * 288);
-
-    strip.clear();
-    setPixelColor(ledIndex, strip.Color(0, 255, 0));
-    for(int x = 1; x < 10; x++) {
-        setPixelColor(ledIndex + x, strip.Color(1, 10 - x, 0));
-        setPixelColor(ledIndex - x, strip.Color(1, 10 - x, 0));
-    }
-    strip.show();
-    delay(25);*/
+    delay(25);
 }
 
 
@@ -628,9 +309,10 @@ void loadBranchesFile() {
     //const char *jsonFile = "{\"nodes\":[{\"index\":6,\"parentIndex\":5,\"childIndexes\":[7,70]},{\"index\":32,\"parentIndex\":31,\"childIndexes\":[33,48]},{\"index\":85,\"parentIndex\":84,\"childIndexes\":[86,91]},{\"index\":90,\"parentIndex\":89,\"childIndexes\":[136,152]},{\"index\":103,\"parentIndex\":102,\"childIndexes\":[104,123]}]}";
     //const char *jsonFile = "{\"nodes\":[{\"index\":6,\"parentIndex\":5,\"childIndexes\":[7,70]},{\"index\":7,\"parentIndex\":6,\"isBranchStart\":true},{\"index\":32,\"parentIndex\":31,\"childIndexes\":[33,48]},{\"index\":33,\"parentIndex\":32,\"isBranchStart\":true},{\"index\":47,\"parentIndex\":46,\"isEndpoint\":true},{\"index\":48,\"parentIndex\":32,\"isBranchStart\":true},{\"index\":69,\"parentIndex\":46,\"isEndpoint\":true},{\"index\":70,\"parentIndex\":6,\"isBranchStart\":true},{\"index\":85,\"parentIndex\":84,\"childIndexes\":[86,91]},{\"index\":90,\"parentIndex\":89,\"childIndexes\":[136,152]},{\"index\":103,\"parentIndex\":102,\"childIndexes\":[104,123]},{\"index\":122,\"isEndpoint\":true},{\"index\":135,\"isEndpoint\":true},{\"index\":151,\"isEndpoint\":true},{\"index\":165,\"isEndpoint\":true},{\"index\":201,\"isEndpoint\":true},{\"index\":213,\"isEndpoint\":true},{\"index\":246,\"isEndpoint\":true},{\"index\":257,\"isEndpoint\":true},{\"index\":301,\"isEndpoint\":true},{\"index\":314,\"isEndpoint\":true},{\"index\":348,\"isEndpoint\":true},{\"index\":364,\"isEndpoint\":true},{\"index\":399,\"isEndpoint\":true},{\"index\":415,\"isEndpoint\":true},{\"index\":446,\"isEndpoint\":true},{\"index\":463,\"isEndpoint\":true},{\"index\":492,\"isEndpoint\":true},{\"index\":512,\"isEndpoint\":true}]}";
 
-    char jsonFile[] = "{\"nodes\":[{\"index\":6,\"childIndexes\":[7,70]},{\"index\":7,\"isBranchStart\":true},{\"index\":32,\"childIndexes\":[33,48]},{\"index\":33,\"isBranchStart\":true},{\"index\":47,\"isEndpoint\":true},{\"index\":48,\"parentIndex\":32,\"isBranchStart\":true},{\"index\":69,\"isEndpoint\":true},{\"index\":70,\"parentIndex\":6,\"isBranchStart\":true},{\"index\":85,\"childIndexes\":[86,91]},{\"index\":90,\"childIndexes\":[136,152]},{\"index\":91,\"parentIndex\":85,\"isBranchStart\":true},{\"index\":103,\"childIndexes\":[104,123]},{\"index\":122,\"isEndpoint\":true},{\"index\":135,\"isEndpoint\":true},{\"index\":151,\"isEndpoint\":true},{\"index\":165,\"isEndpoint\":true},{\"index\":201,\"isEndpoint\":true},{\"index\":213,\"isEndpoint\":true},{\"index\":246,\"isEndpoint\":true},{\"index\":257,\"isEndpoint\":true},{\"index\":301,\"isEndpoint\":true},{\"index\":314,\"isEndpoint\":true},{\"index\":348,\"isEndpoint\":true},{\"index\":364,\"isEndpoint\":true},{\"index\":399,\"isEndpoint\":true},{\"index\":415,\"isEndpoint\":true},{\"index\":446,\"isEndpoint\":true},{\"index\":463,\"isEndpoint\":true},{\"index\":492,\"isEndpoint\":true},{\"index\":512,\"isEndpoint\":true}]}";
+    char jsonFile[] = "{\"nodes\":[{\"index\":6,\"childIndexes\":[7,70]},{\"index\":7,\"isBranchStart\":true},{\"index\":32,\"childIndexes\":[33,48]},{\"index\":33,\"isBranchStart\":true},{\"index\":47,\"isEndpoint\":true},{\"index\":48,\"parentIndex\":32,\"isBranchStart\":true},{\"index\":69,\"isEndpoint\":true},{\"index\":70,\"parentIndex\":6,\"isBranchStart\":true},{\"index\":85,\"childIndexes\":[86,91]},{\"index\":90,\"childIndexes\":[136,152]},{\"index\":91,\"parentIndex\":85,\"isBranchStart\":true},{\"index\":103,\"childIndexes\":[104,123]},{\"index\":122,\"isEndpoint\":true},{\"index\":123,\"parentIndex\":103,\"isBranchStart\":true},{\"index\":135,\"isEndpoint\":true},{\"index\":136,\"parentIndex\":90,\"isBranchStart\":true},{\"index\":151,\"isEndpoint\":true},{\"index\":152,\"parentIndex\":90,\"isBranchStart\":true},{\"index\":165,\"isEndpoint\":true},{\"index\":166,\"parentIndex\":2},{\"index\":169,\"parentIndex\":168,\"isBranchStart\":true},{\"index\":188,\"parentIndex\":187,\"isBranchStart\":true},{\"index\":201,\"isEndpoint\":true},{\"index\":202,\"parentIndex\":187,\"isBranchStart\":true},{\"index\":213,\"isEndpoint\":true},{\"index\":214,\"parentIndex\":168,\"isBranchStart\":true},{\"index\":236,\"parentIndex\":235,\"isBranchStart\":true},{\"index\":246,\"isEndpoint\":true},{\"index\":247,\"parentIndex\":235,\"isBranchStart\":true},{\"index\":257,\"isEndpoint\":true},{\"index\":258,\"parentIndex\":2},{\"index\":268,\"parentIndex\":267,\"isBranchStart\":true},{\"index\":294,\"parentIndex\":293,\"isBranchStart\":true},{\"index\":301,\"isEndpoint\":true},{\"index\":302,\"parentIndex\":293,\"isBranchStart\":true},{\"index\":314,\"isEndpoint\":true},{\"index\":315,\"parentIndex\":271,\"isBranchStart\":true},{\"index\":332,\"parentIndex\":331,\"isBranchStart\":true},{\"index\":348,\"isEndpoint\":true},{\"index\":349,\"parentIndex\":331,\"isBranchStart\":true},{\"index\":364,\"isEndpoint\":true},{\"index\":365,\"parentIndex\":267,\"isBranchStart\":true},{\"index\":382,\"parentIndex\":381,\"isBranchStart\":true},{\"index\":399,\"isEndpoint\":true},{\"index\":400,\"parentIndex\":381,\"isBranchStart\":true},{\"index\":415,\"isEndpoint\":true},{\"index\":416,\"parentIndex\":2},{\"index\":424,\"parentIndex\":423,\"isBranchStart\":true},{\"index\":431,\"parentIndex\":430,\"isBranchStart\":true},{\"index\":446,\"isEndpoint\":true},{\"index\":447,\"parentIndex\":430,\"isBranchStart\":true},{\"index\":463,\"isEndpoint\":true},{\"index\":464,\"parentIndex\":423,\"isBranchStart\":true},{\"index\":477,\"parentIndex\":476,\"isBranchStart\":true},{\"index\":492,\"isEndpoint\":true},{\"index\":493,\"parentIndex\":476,\"isBranchStart\":true},{\"index\":512,\"isEndpoint\":true}]}";
 
-    StaticJsonDocument<2048> doc;
+    //StaticJsonDocument<2048> doc;
+    StaticJsonDocument<4096> doc;
 
     DeserializationError error = deserializeJson(doc, jsonFile);
     if (error) {
@@ -725,11 +407,19 @@ void pixelIndexTest() {
         strip.setPixelColor(i, 255, 0, 0);
       }
     }
-    for (int x = 0; x < powerStartIndexesLength && powerStartIndexes[x] <= i; x++) {
+/*     for (int x = 0; x < powerStartIndexesLength && powerStartIndexes[x] <= i; x++) {
       if (powerStartIndexes[x] == i) {
         strip.setPixelColor(i, 0, 255, 0);
       }
+    } */
+    if (nodes[i].parentIndex == -1 || nodes[i].parentIndex == 2) {
+        strip.setPixelColor(i, 0, 255, 0);
     }
+    /* for (int x = 0; x < centerNodeIndexesLength && centerNodeIndexes[x] <= i; x++) {
+      if (centerNodeIndexes[x] == i) {
+        strip.setPixelColor(i, 0, 255, 0);
+      }
+    } */
   }
   //strip.fill(strip.Color(255, 255, 255));
   strip.show();
@@ -763,6 +453,147 @@ void simpleRead(void) {
   Serial.print(F("Luminosity: "));
   //Serial.println(x, DEC);
   Serial.println(x);
+}
+
+
+void lightningStrike(int endPointArrayIndex) {
+    // For random but grouped strikes...
+    /* int randomIndex = random(0, endPointIndexesLength - NUMSTRIKEPATHS);
+    for (int i = 0; i < NUMSTRIKEPATHS; i++) {
+        pathStartIndexes[i] = endPointIndexes[randomIndex + i];
+    } */
+
+    // For doing the endpoints in rotation
+    /* for (int x = 0; x < NUMSTRIKEPATHS; x++) {
+        if (x < NUMSTRIKEPATHS - 1) {
+            pathStartIndexes[x] = pathStartIndexes[x + 1];
+        } else {
+            pathStartIndexes[x] = endPointIndexes[endpointThingIndex];
+        }
+    }
+    endpointThingIndex++;
+    if (endpointThingIndex >= endPointIndexesLength) {
+        endpointThingIndex = 0;
+    } */
+
+    pathStartIndexes[0] = endPointIndexes[endPointArrayIndex - 1];
+    pathStartIndexes[1] = endPointIndexes[endPointArrayIndex];
+    pathStartIndexes[2] = endPointIndexes[endPointArrayIndex + 1];
+
+
+
+
+    int strikePaths[NUMSTRIKEPATHS][NUMPIXELS];
+    int pathLengths[NUMSTRIKEPATHS];
+
+    // Initialize all the strike path indexes to -1
+    for (int x = 0; x < NUMSTRIKEPATHS; x++) {
+        for (int y = 0; y < NUMPIXELS; y++) {
+            strikePaths[x][y] = -1;
+        }
+    }
+
+    // Determine the path from node 0 to the endpoint given
+    for (int currStrike = 0; currStrike < NUMSTRIKEPATHS; currStrike++) {
+        int x = pathStartIndexes[currStrike];
+        int numNodesInPath = 0;
+
+        // Keep moving along the path by setting x to the parentIndex.
+        // TODO: FIX POTENTIAL INFINITE LOOP CAUSED BY CIRCULAR REFERENCE! (ex: 3 -> 2 -> 1 -> 3...)
+        while (x >= 0) {
+            strikePaths[currStrike][numNodesInPath] = nodes[x].index;
+            numNodesInPath++;
+            x = nodes[x].parentIndex;
+        }
+        numNodesInPath--; // For some reason, this gets incremented an extra time. I can't be bothered to figure out why, so enjoy this lovely hack. -JD
+        pathLengths[currStrike] = numNodesInPath;
+    }
+
+    // Reverse the strikePath arrays
+    // We only care about the first  numNodesInPath elements of the array, and we only need to iterate over half the values
+    // So we stop after half the nodes in the path (the other elements should all be -1)
+    for (int x = 0; x < NUMSTRIKEPATHS; x++) {
+        int numNodesInPath = pathLengths[x];
+        for (int y = 0; y < numNodesInPath; y++) {
+            if (numNodesInPath / 2 <= y) {
+                break;
+            }
+            int tmp = strikePaths[x][y];
+            strikePaths[x][y] = strikePaths[x][numNodesInPath - y];
+            strikePaths[x][numNodesInPath - y] = tmp;
+
+            //std::cout << strikePaths[x][y] << ", ";
+        }
+    }
+
+
+
+    //Serial.println("Setting pixel colors");
+    for (int z = 0; z < NUMPIXELS; z++) {
+        bool isEndOfPath = true;
+        for (int x = 0; x < NUMSTRIKEPATHS; x++) {
+            if (strikePaths[x][z] > -1) {
+                strip.setPixelColor(strikePaths[x][z], 255, 255, 255);
+                isEndOfPath = false;
+            }
+        }
+        if (z % 10 == 0) {
+        //if (z % 1 == 0) {
+            strip.show();
+        }
+        //if (z > NUMPIXELS) {
+        if (isEndOfPath) {
+            break;
+        }
+        /* if (strikePath1[z] == -1 && strikePath2[z] == -1 && strikePath3[z] == -1) {
+            //Serial.println("Ducking out early!");
+            break;
+        } */
+    }
+    strip.show();
+
+/*     delay(200);
+    strip.clear();
+    strip.show(); */
+
+
+    //for (int b = 40; b > 12; b = b - 8) {
+    for (int b = 40; b > 12; b = b - 10) {
+        strip.setBrightness(b * intensity);
+        strip.show();
+        delay(20 * duration);
+    }
+
+    strip.setBrightness(100 * intensity);
+    strip.show();
+    delay(10 * duration);
+
+    strip.setBrightness(6 * intensity);
+    strip.show();
+    delay(50 * duration);
+
+    strip.setBrightness(1);
+    strip.show();
+    delay(50 * duration);
+
+    strip.setBrightness(100 * intensity);
+    strip.show();
+    delay(150 * duration);
+
+    //      for (int b = 75; b > 12; b = b - 8) {
+    for (int b = 100; b > 12; b = b - 10) {
+        strip.setBrightness(b * intensity);
+        strip.show();
+        delay(1);
+    }
+
+    strip.setBrightness(1);
+    strip.show();
+    delay(1);
+
+    strip.clear();
+    strip.show();
+    delay(200);
 }
 
 
